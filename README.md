@@ -40,7 +40,7 @@ This repository represents the foundation for a larger bot system. Future develo
 
 This roadmap reflects the intended phased evolution of the bot, prioritising a solid utility core before expanding into engagement and progression systems.
 
-### Phase 1 — MVP (Utility Core)
+### Phase 1 - MVP (Utility Core)
 
 **Primary goal:** Deliver a reliable, lightweight notification system with persistent storage and minimal overhead.
 
@@ -78,7 +78,7 @@ Designed to remain efficient, low‑cost, and scalable.
 
 ---
 
-### Phase 2 — Engagement Features
+### Phase 2 - Engagement Features
 
 **LFG (Looking For Group) System**
 
@@ -107,7 +107,7 @@ Minimal data retention:
 
 ---
 
-### Phase 3 — XP, Achievements, and Leaderboards
+### Phase 3 - XP, Achievements, and Leaderboards
 
 **XP System Split**
 
