@@ -1,6 +1,6 @@
-import { ActivityType } from 'discord.js';
+import { ActivityType, Events } from 'discord.js';
 export default {
-  name: 'clientReady',
+  name: Events.ClientReady,
   once: true,
   async execute(client) {
     console.log(`[bot] Logged in as ${client.user.tag}`);

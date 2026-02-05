@@ -5,17 +5,17 @@ import { loadEvents, loadCommands } from './bot/loader.js';
 import readyEvent from './bot/events/ready.js';
 import interactionCreateEvent from './bot/events/interactionCreate.js';
 import dontShootCommand from './bot/commands/dontShoot.js';
-import { Collection } from 'discord.js';
+import { Collection, Events } from 'discord.js';
 
 // --- Discord client ---
 const client = createClient();
 client.commands = new Collection();
 let discordReady = false;
 
-client.once('clientReady', () => (discordReady = true));
-client.on('shardDisconnect', () => (discordReady = false));
-client.on('shardReconnecting', () => (discordReady = false));
-client.on('error', () => (discordReady = false));
+client.on(Events.ClientReady, () => (discordReady = true));
+client.on('disconnect', () => (discordReady = false));
+client.on('reconnecting', () => (discordReady = false));
+client.on('resume', () => (discordReady = false));
 
 loadEvents(client, [readyEvent, interactionCreateEvent]);
 loadCommands(client.commands, [dontShootCommand]);
