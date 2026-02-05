@@ -1,4 +1,4 @@
-# Nox the Night Manager
+# Nox the Night Manager ![Cron job status](https://api.cron-job.org/jobs/7232956/fc576fd9f01ff7f7/status-3.svg)
 
 A Discord bot project built to manage and automate server interactions, with an initial focus on slash command handling and stable production deployment. The current implementation focuses on Discord connectivity, command registration, event handling, and a small HTTP service for uptime and health checks.
 

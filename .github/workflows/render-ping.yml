@@ -1,45 +1,45 @@
-name: Keep Render Alive
+# name: Keep Render Alive
 
-on:
-  schedule:
-    - cron: '*/10 * * * *'
-  workflow_dispatch:
+# on:
+#   schedule:
+#     - cron: '*/10 * * * *'
+#   workflow_dispatch:
 
-concurrency:
-  group: keep-render-alive
-  cancel-in-progress: false
+# concurrency:
+#   group: keep-render-alive
+#   cancel-in-progress: false
 
-jobs:
-  ping:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+# jobs:
+#   ping:
+#     runs-on: ubuntu-latest
+#     timeout-minutes: 5
 
-    steps:
-      - name: Ping keep-alive endpoint with retries
-        env:
-          PING_URL: https://discord-nox-bot.onrender.com/healthz
-        run: |
-          set -euo pipefail
+#     steps:
+#       - name: Ping keep-alive endpoint with retries
+#         env:
+#           PING_URL: https://discord-nox-bot.onrender.com/healthz
+#         run: |
+#           set -euo pipefail
 
-          ATTEMPTS=5
-          SLEEP=5
+#           ATTEMPTS=5
+#           SLEEP=5
 
-          for i in $(seq 1 "$ATTEMPTS"); do
-            echo "Attempt $i/$ATTEMPTS..."
+#           for i in $(seq 1 "$ATTEMPTS"); do
+#             echo "Attempt $i/$ATTEMPTS..."
 
-            HTTP_CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 "$PING_URL" || echo "000")
+#             HTTP_CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 "$PING_URL" || echo "000")
 
-            if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 500 ]; then
-              echo "Ping OK (HTTP $HTTP_CODE)"
-              exit 0
-            fi
+#             if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 500 ]; then
+#               echo "Ping OK (HTTP $HTTP_CODE)"
+#               exit 0
+#             fi
 
-            if [ "$i" -lt "$ATTEMPTS" ]; then
-              echo "Ping failed (HTTP $HTTP_CODE), retrying in ${SLEEP}s..."
-              sleep "$SLEEP"
-              SLEEP=$((SLEEP * 2))
-            fi
-          done
+#             if [ "$i" -lt "$ATTEMPTS" ]; then
+#               echo "Ping failed (HTTP $HTTP_CODE), retrying in ${SLEEP}s..."
+#               sleep "$SLEEP"
+#               SLEEP=$((SLEEP * 2))
+#             fi
+#           done
 
-          echo "All attempts failed."
-          exit 1
+#           echo "All attempts failed."
+#           exit 1
