@@ -33,6 +33,7 @@ This repository represents the foundation for a larger bot system. Future develo
 [![Nodemon](https://img.shields.io/badge/Nodemon-3.x-76D04B?logo=nodemon&logoColor=fff)](https://nodemon.io/)
 [![Supabase](https://img.shields.io/badge/Supabase-2.x-3FCF8E?logo=supabase&logoColor=fff)](https://supabase.com/)
 [![Render](https://img.shields.io/badge/Render-000000?logo=render&logoColor=fff)](https://render.com/)
+[![cron-job](https://img.shields.io/badge/cron--job-c33d1b)](https://cron-job.org/)
 
 ---
 
