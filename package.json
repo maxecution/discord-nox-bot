@@ -1,0 +1,25 @@
+{
+  "name": "discord-nox-bot",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "list:commands": "node scripts/list-commands.js",
+    "deploy:commands": "node scripts/deploy-commands.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.94.0",
+    "date-fns": "^4.1.0",
+    "discord.js": "^14.25.1",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
