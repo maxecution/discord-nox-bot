@@ -1,9 +1,9 @@
-import 'dotenv/config';
+import env from '../src/config/env.js';
 import { REST, Routes } from 'discord.js';
 
-const token = process.env.DISCORD_TOKEN?.trim();
-const appId = process.env.DISCORD_CLIENT_ID?.trim();
-const guildId = process.env.DEV_GUILD_ID?.trim();
+const token = env.discordToken;
+const appId = env.discordClientId;
+const guildId = env.devGuildId;
 
 const rest = new REST({ version: '10' }).setToken(token);
 

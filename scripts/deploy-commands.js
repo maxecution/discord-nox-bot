@@ -1,11 +1,11 @@
-import 'dotenv/config';
+import env from '../src/config/env.js';
 import { REST, Routes } from 'discord.js';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const token = process.env.DISCORD_TOKEN?.trim();
-const appId = process.env.DISCORD_CLIENT_ID?.trim();
-const guildId = process.env.DEV_GUILD_ID?.trim();
+const token = env.discordToken;
+const appId = env.discordClientId;
+const guildId = env.devGuildId;
 
 if (!token || !appId || !guildId) {
   console.error('Missing DISCORD_TOKEN, DISCORD_CLIENT_ID, or DEV_GUILD_ID in environment');
