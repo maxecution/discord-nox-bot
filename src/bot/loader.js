@@ -10,6 +10,7 @@ export function loadCommands(collection, commands) {
     if (collection.has(cmd.data.name)) {
       console.warn(`[loader] Duplicate command: ${cmd.data.name}`);
     }
+    console.log(`[loader] Loaded command: ${cmd.data.name}`);
     collection.set(cmd.data.name, cmd);
   }
 }

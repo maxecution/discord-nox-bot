@@ -15,12 +15,16 @@ if (!token || !appId || !guildId) {
 const commands = [];
 
 const commandsPath = path.resolve('src/bot/commands');
-const commandFiles = fs.readdirSync(commandsPath).filter((f) => f.endsWith('.js'));
+const commandFolders = fs
+  .readdirSync(commandsPath, { withFileTypes: true })
+  .filter((dirent) => dirent.isDirectory())
+  .map((dirent) => path.join(commandsPath, dirent.name, 'index.js'));
 
-for (const file of commandFiles) {
-  const { default: cmd } = await import(`../src/bot/commands/${file}`);
+for (const file of commandFolders) {
+  const { default: cmd } = await import(file);
   if (cmd?.data) commands.push(cmd.data.toJSON());
 }
+
 console.log(`[deploy] Loaded ${commands.length} command(s)`);
 
 const rest = new REST({ version: '10' }).setToken(token);

@@ -56,10 +56,11 @@ This roadmap reflects the intended phased evolution of the bot, prioritising a s
 
 All configuration managed through Discord slash commands:
 
-- `/notify add channel:#vc [user:@user?]`
+- `/notify add channel:<voice> [users:<list?>] [buffer:<0|30|60|120?>] [quiet-start:<HH:mm?>] [quiet-end:<HH:mm?>]`
+- `/notify remove channel:<voice>`
 - `/notify list`
-- `/notify remove id:123`
-- `/notify toggle on|off`
+- `/notify toggle channel:<voice> on|off`
+- `/notify quiet channel:<voice> start:<HH:mm?> end:<HH:mm?>`
 
 **Supabase Persistence**
 

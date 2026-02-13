@@ -4,7 +4,7 @@ import { createClient } from './bot/client.js';
 import { loadEvents, loadCommands } from './bot/loader.js';
 import readyEvent from './bot/events/ready.js';
 import interactionCreateEvent from './bot/events/interactionCreate.js';
-import dontShootCommand from './bot/commands/dontShoot.js';
+import notifyCommand from './bot/commands/notify/index.js';
 import { Collection, Events } from 'discord.js';
 
 // --- Discord client ---
@@ -18,7 +18,7 @@ client.on('reconnecting', () => (discordReady = false));
 client.on('resume', () => (discordReady = false));
 
 loadEvents(client, [readyEvent, interactionCreateEvent]);
-loadCommands(client.commands, [dontShootCommand]);
+loadCommands(client.commands, [notifyCommand]);
 
 client.login(env.discordToken);
 
