@@ -2,7 +2,7 @@
 
 A Discord bot project built to manage and automate server interactions, with an initial focus on slash command handling and stable production deployment. The current implementation focuses on Discord connectivity, command registration, event handling, and a small HTTP service for uptime and health checks.
 
-This repository represents the foundation for a larger bot system. Future development will introduce Supabase-backed persistence and more advanced moderation and automation features.
+This repository represents the foundation for a larger bot system. The current implementation includes Supabase-backed persistence for voice channel subscriptions, cooldown logic, and quiet-hour enforcement. Future development will introduce more advanced moderation and automation features.
 
 ---
 
@@ -51,6 +51,8 @@ This roadmap reflects the intended phased evolution of the bot, prioritising a s
 - Optional filtering to notify only when specific users join
 - Cooldown and anti‑spam logic to prevent excessive alerts
 - Ignore notifications if the subscriber is already present in the voice channel
+- Opional quiet hours to temporarily pause notifications during specific hours
+- All configuration commands respond ephemerally to avoid channel clutter.
 
 **Slash Commands Only (No Dashboard)**
 
@@ -64,13 +66,27 @@ All configuration managed through Discord slash commands:
 
 **Supabase Persistence**
 
-Stores minimal but essential data:
+Subscription Data Model
 
-- Subscription records
-- Cooldown timestamps
-- Lightweight audit logs
+Each voice channel subscription is stored per:
 
-Designed to remain efficient, low‑cost, and scalable.
+- Guild ID
+- Channel ID
+- Subscribed User ID
+
+With configuration fields:
+
+- Buffer (seconds between notifications)
+- Quiet hours start/end (optional)
+- Enabled state
+
+A composite unique constraint ensures:
+
+```sql
+UNIQUE (guild_id, channel_id, user_id)
+```
+
+This guarantees idempotent upserts and prevents duplicate subscriptions, designed to remain efficient, low‑cost, and scalable.
 
 **Render Keep‑Alive HTTP Endpoint**
 
@@ -279,10 +295,11 @@ This approach is optimised for private or development-only bots.
 
 ## Current Limitations
 
-- Supabase integration is not implemented yet
-- Only one example command exists
-- No persistence layer is active
 - The bot is designed for private or controlled server use
+- No dashboard UI (slash commands only)
+- No cross-guild global command deployment
+- No advanced moderation tools yet
+- No analytics or historical activity logging
 
 ---
 
