@@ -1,13 +1,13 @@
 import { ChannelType, SlashCommandSubcommandBuilder, MessageFlags } from 'discord.js';
-import { BUFFER_OPTIONS, MAX_USERS } from './utils/constants.js';
-import { getSelectedUsers } from './utils/options.js';
-import { validateQuietTimes } from './utils/validation.js';
-import { formatWatchedUsers } from './utils/formatters.js';
+import { BUFFER_OPTIONS, MAX_USERS } from '../../utils/constants.js';
+import { getSelectedUsers } from '../../utils/options.js';
+import { validateQuietTimes } from '../../utils/validation.js';
+import { formatWatchedUsers } from '../../utils/formatters.js';
 import { supabase } from '../../../supabase/client.js';
 
 const data = new SlashCommandSubcommandBuilder()
   .setName('add')
-  .setDescription('Adding VC to notification list')
+  .setDescription('Add VC to notification list')
   .addChannelOption((option) =>
     option
       .setName('channel')

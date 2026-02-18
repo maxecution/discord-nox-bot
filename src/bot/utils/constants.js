@@ -1,4 +1,3 @@
-console.log('Loaded notify/utils/constants.js');
 export const MAX_USERS = 5;
 
 export const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
