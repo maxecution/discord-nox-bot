@@ -1,10 +1,12 @@
 import { SlashCommandSubcommandBuilder, MessageFlags } from 'discord.js';
+import { AUDIT_EVENTS } from '../../utils/constants.js';
 import {
   getUserSubscriptionChannelIds,
   resolveChannelsFromIds,
   filterChannelsBySearch,
   toAutocompleteChoices,
 } from '../../services/subscriptionService.js';
+import { logAuditEvent } from '../../services/auditService.js';
 import { supabase } from '../../../supabase/client.js';
 
 const data = new SlashCommandSubcommandBuilder()
@@ -53,6 +55,16 @@ const execute = async (interaction) => {
   await interaction.reply({
     content: `Removed subscription for **${channelName}**.`,
     flags: MessageFlags.Ephemeral,
+  });
+
+  logAuditEvent({
+    eventType: 'SUBSCRIPTION_REMOVED',
+    actorUserId: interaction.user.id,
+    guildId: interaction.guildId,
+    metadata: {
+      voiceChannelId: channel.id,
+      channel_name: channel.name,
+    },
   });
 };
 

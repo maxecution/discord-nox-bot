@@ -1,8 +1,9 @@
 import { ChannelType, SlashCommandSubcommandBuilder, MessageFlags } from 'discord.js';
-import { BUFFER_OPTIONS, MAX_USERS } from '../../utils/constants.js';
+import { BUFFER_OPTIONS, MAX_USERS, AUDIT_EVENTS } from '../../utils/constants.js';
 import { getSelectedUsers } from '../../utils/options.js';
 import { validateQuietTimes } from '../../utils/validation.js';
 import { formatWatchedUsers } from '../../utils/formatters.js';
+import { logAuditEvent } from '../../services/auditService.js';
 import { supabase } from '../../../supabase/client.js';
 
 const data = new SlashCommandSubcommandBuilder()
@@ -35,6 +36,14 @@ const execute = async (interaction) => {
   const commandUserId = interaction.user.id;
 
   const channel = interaction.options.getChannel('channel');
+
+  if (!channel?.isVoiceBased()) {
+    return interaction.reply({
+      content: 'Invalid voice channel selection.',
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
   const channelId = channel.id;
 
   const users = getSelectedUsers(interaction);
@@ -60,11 +69,15 @@ const execute = async (interaction) => {
     enabled: true,
   };
 
-  const { error } = await supabase.from('subscriptions').upsert(payload, {
-    onConflict: 'guild_id,user_id,voice_channel_id',
-  });
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .upsert(payload, {
+      onConflict: 'guild_id,user_id,voice_channel_id',
+    })
+    .select()
+    .single();
 
-  if (error) {
+  if (error || !data) {
     console.error(error);
     return interaction.reply({
       content: 'Failed to save subscription.',
@@ -77,6 +90,22 @@ const execute = async (interaction) => {
       `Subscribed to **${channel.name}**. Watching **${watchedUsers}** with **${buffer}s** buffer.` +
       (quietStart ? ` Quiet hours: **${quietStart} → ${quietEnd}**.` : ''),
     flags: MessageFlags.Ephemeral,
+  });
+
+  const wasCreated = new Date(data.created_at).getTime() === new Date(data.updated_at).getTime();
+
+  logAuditEvent({
+    eventType: wasCreated ? AUDIT_EVENTS.SUBSCRIPTION_CREATED : AUDIT_EVENTS.SUBSCRIPTION_UPDATED,
+    actorUserId: interaction.user.id,
+    guildId: interaction.guildId,
+    metadata: {
+      voiceChannelId: channelId,
+      channel_name: channel.name,
+      notify_user_ids: users.map((u) => u.id),
+      buffer_seconds: buffer,
+      quiet_start: quietStart,
+      quiet_end: quietEnd,
+    },
   });
 };
 
