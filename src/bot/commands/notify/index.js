@@ -18,4 +18,12 @@ export default {
     const sub = interaction.options.getSubcommand();
     return handlers[sub].execute(interaction);
   },
+
+  async subbedChannels(interaction) {
+    const sub = interaction.options.getSubcommand();
+    const handler = handlers[sub];
+    if (handler?.subbedChannels) {
+      return handler.subbedChannels(interaction);
+    }
+  },
 };
