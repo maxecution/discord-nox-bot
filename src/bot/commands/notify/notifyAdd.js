@@ -3,6 +3,7 @@ import { BUFFER_OPTIONS, MAX_USERS, AUDIT_EVENTS } from '../../utils/constants.j
 import { getSelectedUsers } from '../../utils/options.js';
 import { validateQuietTimes } from '../../utils/validation.js';
 import { formatWatchedUsers } from '../../utils/formatters.js';
+import { invalidateGuildSubscriptions } from '../../services/subscriptionCacheService.js';
 import { logAuditEvent } from '../../services/auditService.js';
 import { supabase } from '../../../supabase/client.js';
 
@@ -39,12 +40,13 @@ const execute = async (interaction) => {
 
   if (!channel?.isVoiceBased()) {
     return interaction.reply({
-      content: 'Invalid voice channel selection.',
+      content: 'Please select a valid voice channel.',
       flags: MessageFlags.Ephemeral,
     });
   }
 
   const channelId = channel.id;
+  const channelName = channel.name;
 
   const users = getSelectedUsers(interaction);
   const watchedUsers = formatWatchedUsers(users);
@@ -85,9 +87,11 @@ const execute = async (interaction) => {
     });
   }
 
+  invalidateGuildSubscriptions(guildId);
+
   await interaction.reply({
     content:
-      `Subscribed to **${channel.name}**. Watching **${watchedUsers}** with **${buffer}s** buffer.` +
+      `Subscribed to **${channelName}**. Watching **${watchedUsers}** with **${buffer}s** buffer.` +
       (quietStart ? ` Quiet hours: **${quietStart} → ${quietEnd}**.` : ''),
     flags: MessageFlags.Ephemeral,
   });
@@ -96,11 +100,11 @@ const execute = async (interaction) => {
 
   logAuditEvent({
     eventType: wasCreated ? AUDIT_EVENTS.SUBSCRIPTION_CREATED : AUDIT_EVENTS.SUBSCRIPTION_UPDATED,
-    actorUserId: interaction.user.id,
-    guildId: interaction.guildId,
+    actorUserId: commandUserId,
+    guildId: guildId,
     metadata: {
       voiceChannelId: channelId,
-      channel_name: channel.name,
+      channel_name: channelName,
       notify_user_ids: users.map((u) => u.id),
       buffer_seconds: buffer,
       quiet_start: quietStart,

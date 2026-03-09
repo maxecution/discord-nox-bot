@@ -6,6 +6,7 @@ import {
   filterChannelsBySearch,
   toAutocompleteChoices,
 } from '../../services/subscriptionService.js';
+import { invalidateGuildSubscriptions } from '../../services/subscriptionCacheService.js';
 import { logAuditEvent } from '../../services/auditService.js';
 import { supabase } from '../../../supabase/client.js';
 
@@ -18,10 +19,12 @@ const data = new SlashCommandSubcommandBuilder()
 
 const execute = async (interaction) => {
   const channelId = interaction.options.getString('channel');
+  const guildId = interaction.guildId;
+  const userId = interaction.user.id;
 
   if (!channelId) {
     return interaction.reply({
-      content: 'Invalid channel selection.',
+      content: 'Please select a valid channel.',
       flags: MessageFlags.Ephemeral,
     });
   }
@@ -32,8 +35,8 @@ const execute = async (interaction) => {
   const { data, error } = await supabase
     .from('subscriptions')
     .delete()
-    .eq('guild_id', interaction.guildId)
-    .eq('user_id', interaction.user.id)
+    .eq('guild_id', guildId)
+    .eq('user_id', userId)
     .eq('voice_channel_id', channelId)
     .select();
 
@@ -57,13 +60,15 @@ const execute = async (interaction) => {
     flags: MessageFlags.Ephemeral,
   });
 
+  invalidateGuildSubscriptions(guildId);
+
   logAuditEvent({
-    eventType: 'SUBSCRIPTION_REMOVED',
-    actorUserId: interaction.user.id,
-    guildId: interaction.guildId,
+    eventType: AUDIT_EVENTS.SUBSCRIPTION_REMOVED,
+    actorUserId: userId,
+    guildId: guildId,
     metadata: {
-      voiceChannelId: channel.id,
-      channel_name: channel.name,
+      voiceChannelId: channelId,
+      channel_name: channelName,
     },
   });
 };
