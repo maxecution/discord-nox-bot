@@ -1,8 +1,12 @@
-# Nox the Night Manager ![Cron job status](https://api.cron-job.org/jobs/7232956/fc576fd9f01ff7f7/status-3.svg)
+# Nox the Night Manager
 
-A Discord bot project built to manage and automate server interactions, with an initial focus on slash command handling and stable production deployment. The current implementation focuses on Discord connectivity, command registration, event handling, and a small HTTP service for uptime and health checks.
+![Cron job status](https://api.cron-job.org/jobs/7232956/fc576fd9f01ff7f7/status-3.svg)
 
-This repository represents the foundation for a larger bot system. Future development will introduce Supabase-backed persistence and more advanced moderation and automation features.
+A Discord bot project designed to manage and automate server interactions, with an initial focus on slash command handling and stable production deployment.
+
+The current implementation includes a fully working **voice channel notification service**, backed by Supabase persistence, in-memory notification buffering, quiet hour enforcement, and audit logging.
+
+The repository represents the foundation for a larger modular bot system designed to remain lightweight, reliable, and inexpensive to operate on small hosting environments.
 
 ---
 
@@ -12,9 +16,11 @@ This repository represents the foundation for a larger bot system. Future develo
 - [Roadmap](#roadmap)
 - [Environment Configuration](#environment-configuration)
 - [Discord Bot Setup](#discord-bot-setup)
-- [How the Bot Works](#how-the-bot-works)
+- [Notification System](#notification-system)
+- [Subscription Cache](#subscription-cache)
 - [Command System](#command-system)
 - [Event Handling](#event-handling)
+- [Database Architecture](#database-architecture)
 - [HTTP Server and Health Checks](#http-server-and-health-checks)
 - [Graceful Shutdown](#graceful-shutdown)
 - [Slash Command Deployment](#slash-command-deployment)
@@ -26,7 +32,7 @@ This repository represents the foundation for a larger bot system. Future develo
 ## Tech Stack
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/en)
-[![Discord.js](https://img.shields.io/badge/discord.js-v14-5865F2?logo=discord&logoColor=white)](https://discord.js.org/)
+[![discord.js](https://img.shields.io/badge/discord.js-v14-5865F2?logo=discord&logoColor=white)](https://discord.js.org/)
 [![Express](https://img.shields.io/badge/Express-5.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
 [![dotenv](https://img.shields.io/badge/dotenv-17.x-2E7D32?logo=dotenv&logoColor=fff)](https://www.dotenv.org/)
 [![date-fns](https://img.shields.io/badge/date--fns-4.x-8c1b54?logo=datefns&logoColor=fff)](https://date-fns.org/)
@@ -39,121 +45,293 @@ This repository represents the foundation for a larger bot system. Future develo
 
 ## Roadmap
 
-This roadmap reflects the intended phased evolution of the bot, prioritising a solid utility core before expanding into engagement and progression systems.
+This roadmap reflects the intended phased evolution of the bot, prioritising a stable utility core before expanding into engagement and progression systems.
+
+---
 
 ### Phase 1 - MVP (Utility Core)
 
-**Primary goal:** Deliver a reliable, lightweight notification system with persistent storage and minimal overhead.
+**Primary goal:** deliver a reliable, lightweight notification system with persistent storage and minimal operational overhead.
 
-**Voice Channel Join DM Subscriptions**
+#### Voice Channel Join DM Notifications
 
-- Subscribe to notifications for a specific voice channel
-- Optional filtering to notify only when specific users join
-- Cooldown and anti‑spam logic to prevent excessive alerts
-- Ignore notifications if the subscriber is already present in the voice channel
+Users can subscribe to voice channels and receive a **direct message notification** when someone joins.
 
-**Slash Commands Only (No Dashboard)**
+Features include:
 
-All configuration managed through Discord slash commands:
+- Subscribing to specific voice channels
+- Optional filtering to notify only when **specific users** join
+- **Buffered notifications** (0-120 seconds)
+- **Quiet hour support**
+- Ignoring notifications if the subscriber joins voice themselves
+- Automatic grouping of multiple join events into a single notification
+- Ephemeral command responses to prevent channel clutter
 
-- `/notify add channel:#vc [user:@user?]`
-- `/notify list`
-- `/notify remove id:123`
-- `/notify toggle on|off`
+Example notification:
 
-**Supabase Persistence**
+```text
+Alice, Bob, and Charlie joined "Gaming VC" on "My Server"
+```
 
-Stores minimal but essential data:
+---
 
-- Subscription records
-- Cooldown timestamps
-- Lightweight audit logs
+## Slash Commands
 
-Designed to remain efficient, low‑cost, and scalable.
+All configuration is performed directly inside Discord using slash commands.
 
-**Render Keep‑Alive HTTP Endpoint**
+```text
+/notify add
+/notify remove
+```
 
-- Prevents Render instance sleeping
-- Uses a simple ping route
-- No unnecessary compute or background workloads
+---
+
+### `/notify add` Command
+
+Creates or updates a subscription.
+
+```text
+/notify add
+channel:<voice>
+[user1 ... userN]
+[buffer:0|30|60|120]
+[quiet-start:HH:mm]
+[quiet-end:HH:mm]
+```
+
+Behaviour:
+
+- Creates a new subscription if none exists
+- Updates existing subscriptions using an idempotent upsert
+- Stores the list of watched users as an array
+
+---
+
+### `/notify remove` Command
+
+Removes a subscription.
+
+Autocomplete dynamically displays only the channels that the user is currently subscribed to.
+
+---
+
+## Notification System
+
+The notification system operates entirely through the `voiceStateUpdate` event.
+
+This avoids background workers and allows the bot to operate efficiently even on low-resource hosting environments.
+
+---
+
+### Notification Flow
+
+1. A user joins a voice channel
+2. The bot receives the `voiceStateUpdate` event
+3. The bot retrieves active subscriptions for the guild
+4. Matching subscriptions are filtered by:
+
+- channel
+- enabled state
+- watched users
+- quiet hours
+
+5. If the subscription is valid:
+
+- the joining user is added to an in-memory buffer
+- a timer starts based on the subscription buffer time
+
+6. When the buffer expires:
+
+- all users who joined during the buffer window are grouped
+- a single DM notification is sent
+
+---
+
+### In-Memory Notification Buffers
+
+To minimise database load, active notification buffers are stored in memory.
+
+Each buffer tracks:
+
+- subscription ID
+- joining user IDs
+- target subscriber
+- buffer expiration timer
+
+Benefits:
+
+- avoids frequent database writes
+- reduces latency
+- eliminates the need for cooldown tables
+
+---
+
+### Subscriber Presence Detection
+
+If the subscriber joins any voice channel while a notification buffer is active:
+
+- the pending notification is cancelled
+- the buffer is cleared
+
+This prevents unnecessary notifications when the user is already active in voice.
+
+---
+
+## Subscription Cache
+
+Voice join events can occur frequently, so subscriptions are cached in memory.
+
+The cache stores **guild-level subscription data** with a short TTL.
+
+Benefits:
+
+- prevents database reads on every voice join
+- reduces Supabase query load
+- improves event response speed
+
+Cache refresh occurs automatically when expired.
+
+---
+
+## Database Architecture
+
+The bot uses **Supabase Postgres** for persistent storage.
+
+---
+
+### Subscriptions Table
+
+Stores all voice channel subscriptions.
+
+Key fields:
+
+- `guild_id`
+- `user_id`
+- `voice_channel_id`
+- `notify_user_ids[]`
+- `buffer_seconds`
+- `quiet_start`
+- `quiet_end`
+- `enabled`
+
+Composite constraint:
+
+```sql
+UNIQUE (guild_id, user_id, voice_channel_id)
+```
+
+This guarantees safe upserts and prevents duplicate subscriptions.
+
+---
+
+### Audit Logging
+
+All configuration commands create audit records.
+
+Stored fields:
+
+- event type
+- actor user
+- guild
+- metadata (JSON)
+
+Example events:
+
+```text
+SUBSCRIPTION_CREATED
+SUBSCRIPTION_UPDATED
+SUBSCRIPTION_REMOVED
+```
+
+This provides lightweight historical tracking without storing large activity logs.
 
 ---
 
 ### Phase 2 - Engagement Features
 
-**LFG (Looking For Group) System**
+#### LFG (Looking For Group) System
 
 **Command UX**
 
-- `/lfg game:"Arc Raiders" time:"20:00" note:"Trials?"`
+```text
+/lfg game:"Arc Raiders" time:"20:00" note:"Trials?"
+```
 
-**Bot Behaviour**
+**Bot behaviour**
 
 - Posts an embed containing:
-  - Game title
-  - Start time
-  - Creator
-  - Optional note
+  - game title
+  - start time
+  - creator
+  - optional note
 
 - Users click a ✅ reaction to join
-- Bot dynamically updates the participant list
-- Reminder ping shortly before session start
 
-**Storage Impact**
+- The bot dynamically updates the participant list
+
+- A reminder ping is sent shortly before the session start
+
+**Storage impact**
 
 Minimal data retention:
 
 - LFG post records
-- Reaction participant user IDs
+- reaction participant user IDs
 
 ---
 
 ### Phase 3 - XP, Achievements, and Leaderboards
 
-**XP System Split**
+#### XP System Split
 
-- **Text XP:** Earned per message with cooldown enforcement
-- **Voice XP:** Earned per minute spent in voice channels
-- Stored separately to allow accurate balancing and tuning
+- **Text XP:** earned per message with cooldown enforcement
+- **Voice XP:** earned per minute spent in voice channels
 
-**Derived Systems**
+Stored separately to allow accurate balancing and tuning.
 
-- Achievements
-- Activity milestones
-- Potential Frontend Leaderboard Dashboard
+#### Derived Systems
 
-**Leaderboards**
+- achievements
+- activity milestones
+- potential frontend leaderboard dashboard
 
-- `/leaderboard text`
-- `/leaderboard voice`
-- `/leaderboard total`
+#### Leaderboards
 
-**Storage Strategy**
+```text
+/leaderboard text
+/leaderboard voice
+/leaderboard total
+```
 
-Stores only essential aggregates:
+#### Storage Strategy
+
+Only essential aggregates are stored:
 
 - XP totals
-- Last activity timestamps
+- last activity timestamps
 
-Raw activity logs are intentionally not stored to keep the database lightweight, cost‑efficient, and privacy‑respectful.
+Raw activity logs are intentionally not stored to keep the database lightweight, cost-efficient, and privacy-respectful.
 
 ---
 
 ## Environment Configuration
 
 Local development uses a `.env` file, which is ignored in Git.
+
 Production deployments (for example Render) read values from platform environment variables.
 
-### Required environment variables
+### Required Environment Variables
 
 ```env
 DISCORD_TOKEN=your_bot_token
 DISCORD_CLIENT_ID=your_application_client_id
 DEV_GUILD_ID=your_test_server_id
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_secret_supabase_key
 PORT=3000
 ```
 
-### Recommended workflow
+### Recommended Workflow
 
 - `.env` is kept local and excluded from version control
 - `.env.example` can be committed with placeholder values
@@ -163,125 +341,118 @@ PORT=3000
 
 ## Discord Bot Setup
 
-To run the bot, you must:
+To run the bot:
 
-1. Create a Discord application in the Developer Portal
-2. Add a bot to the application
-3. Invite the bot to a server
-4. Copy the server ID and set it as `DEV_GUILD_ID`
-5. Copy the bot token and set it as `DISCORD_TOKEN`
+1. **Create a Discord application**
+   - Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+   - Add a new application and then add a bot to it
 
-No additional Discord client configuration is required beyond inviting the bot to a server.
+2. **Invite the bot to a server**
+   - Copy the server ID and set it as `DEV_GUILD_ID` in environment secrets
+   - Copy the bot token and set it as `DISCORD_TOKEN` in environment secrets
 
----
+3. **Set up the database (Supabase or Postgres)**
+   - Create a new Supabase project (or Postgres database)
+   - Open the SQL editor and run the commands in `src/supabase/schema.sql` to create the required tables, indexes, and triggers
+   - Enable Row Level Security (RLS) if using Supabase
 
-## How the Bot Works
+4. **Configure environment secrets for the database**
+   - `SUPABASE_URL` – the URL of your Supabase project
+   - `SUPABASE_KEY` – the service key (or anon key for development, but service key recommended for bot)
 
-### Application entry point
+5. **Run the bot**
+   - Local development: `npm run dev`
+   - Production: deploy to your hosting platform and ensure environment variables are set
 
-The bot is started through `src/index.js`, which orchestrates:
-
-- Discord client creation
-- Command and event loading
-- Express HTTP server startup
-- Graceful shutdown handling
-
-### Discord client lifecycle
-
-- A Discord client is created via `createClient()`
-- A `Collection` stores loaded slash commands
-- Event handlers are registered dynamically
-- The bot logs in using `DISCORD_TOKEN`
-
-A readiness flag tracks whether the client is connected:
-
-- Set to `true` when the client becomes ready
-- Reset on disconnect, reconnect, or error
+No additional Discord client configuration is required beyond inviting the bot to a server. The bot will automatically handle slash commands, subscriptions, and notifications using the configured database.
 
 ---
 
 ## Command System
 
-Commands are loaded into a Discord.js `Collection` and executed through the `interactionCreate` event.
+Commands are loaded into a `discord.js` `Collection` and executed through the `interactionCreate` event.
 
-### Example command
+Each command exports:
 
-`dontShoot` is a test slash command used to validate deployment and execution.
+```javascript
+data;
+execute();
+```
 
-Behaviour:
+Subcommands are routed through a central command handler.
 
-- Command name: `hey`
-- Responds with: `Don't shoot!`
-
-### Command execution flow
-
-1. A user runs a slash command
-2. `interactionCreate` checks if it is a chat input command
-3. The command handler retrieves the command from the collection
-4. The command `execute()` function runs
-5. Errors are caught and reported gracefully
-
-Unknown commands return an ephemeral error message.
+Autocomplete functionality is supported for commands that require dynamic options.
 
 ---
 
 ## Event Handling
 
-The bot currently handles:
+The bot listens to the following Discord events:
 
-- `ready` / `clientReady`
+- `ready`
 - `interactionCreate`
-- Disconnect and reconnect state changes
+- `voiceStateUpdate`
+- disconnect/reconnect lifecycle events
 
-Event handlers are modular and loaded through a loader utility.
+Event modules are loaded dynamically through the event loader.
 
 ---
 
 ## HTTP Server and Health Checks
 
-An Express server runs alongside the bot to provide:
+A small Express server runs alongside the bot.
 
-- A root status endpoint
-- A health route reporting bot readiness
+Endpoints:
 
-This allows uptime monitoring on hosting platforms.
+```text
+/
+```
 
-The server shuts down gracefully when the process receives termination signals.
+Basic status response.
+
+```text
+/healthz
+```
+
+Health check endpoint used by cron-job.org to keep the Render instance awake.
 
 ---
 
 ## Graceful Shutdown
 
-The bot listens for system signals and performs clean shutdown steps:
+The bot listens for system termination signals.
 
-- Stops the HTTP server
-- Destroys the Discord client connection
-- Exits safely
+Shutdown process:
 
-This prevents orphaned connections and unstable shutdowns.
+1. Stop the HTTP server
+2. Destroy the Discord client
+3. Exit cleanly
+
+This prevents dangling connections and unstable deployments.
 
 ---
 
 ## Slash Command Deployment
 
-Slash commands are deployed using a dedicated script.
+Commands are deployed using a dedicated script.
 
-### Behaviour
+Behaviour:
 
 - Commands are registered to a development guild using `DEV_GUILD_ID`
-- Guild deployment provides instant availability
-- This project intentionally avoids global command registration
+- Guild deployment provides instant command availability
 
-This approach is optimised for private or development-only bots.
+Global commands are intentionally avoided during development to maintain fast iteration and testing.
 
 ---
 
 ## Current Limitations
 
-- Supabase integration is not implemented yet
-- Only one example command exists
-- No persistence layer is active
-- The bot is designed for private or controlled server use
+- Designed primarily for **private or small server environments**
+- Notifications rely on **in-memory buffers** (no persistence across restarts)
+- No dashboard UI
+- No cross-guild global command deployment
+- No advanced moderation features
+- No analytics or historical activity tracking beyond audit logs
 
 ---
 

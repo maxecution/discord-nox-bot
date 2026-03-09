@@ -9,7 +9,7 @@ const ensure = (vars) => {
   }
 };
 
-ensure(['DISCORD_TOKEN', 'DISCORD_CLIENT_ID', 'DEV_GUILD_ID']);
+ensure(['DISCORD_TOKEN', 'DISCORD_CLIENT_ID', 'DEV_GUILD_ID', 'SUPABASE_URL', 'SUPABASE_KEY']);
 
 const parsedPort = Number.parseInt(process.env.PORT || '3000', 10);
 
@@ -17,6 +17,10 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: Number.isNaN(parsedPort) ? 3000 : parsedPort,
   discordToken: process.env.DISCORD_TOKEN?.trim(),
+  discordClientId: process.env.DISCORD_CLIENT_ID?.trim(),
+  devGuildId: process.env.DEV_GUILD_ID?.trim(),
+  supabaseUrl: process.env.SUPABASE_URL?.trim(),
+  supabaseKey: process.env.SUPABASE_KEY?.trim(),
   isRender: !!process.env.RENDER,
 };
 
