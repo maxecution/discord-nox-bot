@@ -326,6 +326,8 @@ Production deployments (for example Render) read values from platform environmen
 DISCORD_TOKEN=your_bot_token
 DISCORD_CLIENT_ID=your_application_client_id
 DEV_GUILD_ID=your_test_server_id
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_secret_supabase_key
 PORT=3000
 ```
 
@@ -341,13 +343,28 @@ PORT=3000
 
 To run the bot:
 
-1. Create a Discord application in the Developer Portal
-2. Add a bot to the application
-3. Invite the bot to a server
-4. Copy the server ID and set it as `DEV_GUILD_ID`
-5. Copy the bot token and set it as `DISCORD_TOKEN`
+1. **Create a Discord application**
+   - Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+   - Add a new application and then add a bot to it
 
-No additional Discord client configuration is required beyond inviting the bot to a server.
+2. **Invite the bot to a server**
+   - Copy the server ID and set it as `DEV_GUILD_ID` in environment secrets
+   - Copy the bot token and set it as `DISCORD_TOKEN` in environment secrets
+
+3. **Set up the database (Supabase or Postgres)**
+   - Create a new Supabase project (or Postgres database)
+   - Open the SQL editor and run the commands in `src/supabase/schema.sql` to create the required tables, indexes, and triggers
+   - Enable Row Level Security (RLS) if using Supabase
+
+4. **Configure environment secrets for the database**
+   - `SUPABASE_URL` – the URL of your Supabase project
+   - `SUPABASE_KEY` – the service key (or anon key for development, but service key recommended for bot)
+
+5. **Run the bot**
+   - Local development: `npm run dev`
+   - Production: deploy to your hosting platform and ensure environment variables are set
+
+No additional Discord client configuration is required beyond inviting the bot to a server. The bot will automatically handle slash commands, subscriptions, and notifications using the configured database.
 
 ---
 
